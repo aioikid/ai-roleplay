@@ -1,104 +1,37 @@
+// functions/_shared.ts
+export const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': '*',
+  'Content-Type': 'application/json'
+} as Record<string, string>;
+
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { CORS_HEADERS } from './_shared.js';
+import FormData from 'form-data';
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-  // Handle CORS preflight
+const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': '*',
-        'Content-Type': 'application/json',
-      } as Record<string, string>,
-      body: '',
-    }
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    }
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'OpenAI API key not configured' })
-      }
-    }
+    const fileBuffer = Buffer.from(event.body || '', 'base64');
+    const fd = new FormData();
+    fd.append('file', fileBuffer, { filename: 'audio.webm' });
+    fd.append('model', 'whisper-1');
 
-    // Get the binary data from the request
-    const body = event.isBase64Encoded ? 
-      Buffer.from(event.body || '', 'base64') : 
-      event.body
-
-    if (!body) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'No audio data provided' })
-      }
-    }
-
-    // Create FormData for OpenAI API
-    const formData = new FormData()
-    const audioBlob = new Blob([body], { type: 'audio/webm' })
-    formData.append('file', audioBlob, 'recording.webm')
-    formData.append('model', 'whisper-1')
-    formData.append('language', 'ja')
-
-    const openaiRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: formData
-    })
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: fd as any
+    });
 
-    if (!openaiRes.ok) {
-      const errorData = await openaiRes.text()
-      console.error('OpenAI STT API error:', openaiRes.status, errorData)
-      throw new Error(`OpenAI API error: ${openaiRes.status} ${openaiRes.statusText}`)
-    }
-
-    const data = await openaiRes.json()
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      } as Record<string, string>,
-      body: JSON.stringify(data)
-    }
-  } catch (error) {
-    console.error('STT API error:', error)
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
+    const data = await resp.json();
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify(data) };
+  } catch (err) {
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Internal Server Error' }) };
   }
-}
+};
 
-export { handler }
+export { handler };
