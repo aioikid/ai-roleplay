@@ -1,38 +1,24 @@
-// functions/_shared.ts
-export const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Allow-Methods': '*',
-  'Content-Type': 'application/json'
-} as Record<string, string>;
-
-import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { jwt } from 'twilio';
-import { CORS_HEADERS } from './_shared.js';
+const { AccessToken } = jwt;
+const { VoiceGrant } = AccessToken;
 
-const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
-  }
-
-  const identity = (event.queryStringParameters?.identity) || 'test_user';
-  const AccessToken = jwt.AccessToken;
-  const VoiceGrant = AccessToken.VoiceGrant;
-
+export async function handler(event: any) {
   const token = new AccessToken(
     process.env.TWILIO_ACCOUNT_SID!,
     process.env.TWILIO_API_KEY_SID!,
     process.env.TWILIO_API_KEY_SECRET!,
-    { identity }
+    { identity: 'test_user' }
   );
 
-  const voiceGrant = new VoiceGrant({
-    outgoingApplicationSid: process.env.TWIML_APP_SID!,
-    incomingAllow: true
-  });
-
+  const voiceGrant = new VoiceGrant({ outgoingApplicationSid: process.env.TWIML_APP_SID! });
   token.addGrant(voiceGrant);
-  return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ token: token.toJwt() }) };
-};
 
-export { handler };
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ token: token.toJwt() })
+  };
+}
