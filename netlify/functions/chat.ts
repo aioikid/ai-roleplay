@@ -1,52 +1,29 @@
-import axios from 'axios';
+import { Handler } from '@netlify/functions';
+import OpenAI from 'openai';
 
-export async function handler(event: any) {
+export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': '*',
-        'Content-Type': 'application/json'
-      },
-      body: ''
-    };
+    return { statusCode: 200, headers: corsHeaders, body: '' };
   }
 
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
   const { message } = JSON.parse(event.body || '{}');
 
-  try {
-    const openaiRes = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: 'あなたは営業ロープレAIです。' },
-          { role: 'user', content: message }
-        ]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  const chat = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: message }],
+  });
 
-    const reply = openaiRes.data.choices[0].message.content;
+  return {
+    statusCode: 200,
+    headers: corsHeaders,
+    body: JSON.stringify({ reply: chat.choices[0].message.content }),
+  };
+};
 
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reply })
-    };
-  } catch (error: any) {
-    console.error(error);
-    return {
-      statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'OpenAI API error' })
-    };
-  }
-}
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+  'Content-Type': 'application/json',
+};
