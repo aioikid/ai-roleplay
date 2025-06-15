@@ -2,22 +2,18 @@
   "name": "ai-roleplay-poc",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "build": "next build"
   },
   "dependencies": {
-    "next": "14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "@netlify/functions": "^3.39.0",
-    "openai": "^4.24.1",
-    "twilio": "^4.10.0",
-    "form-data": "^4.0.0"
+    "axios": "^1.7.2",
+    "openai": "^4.48.0",
+    "twilio": "^4.27.0"
   },
-  "engines": {
-    "node": "18.x"
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.5"
   }
 }
