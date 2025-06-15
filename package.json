@@ -13,7 +13,8 @@
     "react-dom": "18.2.0",
     "twilio": "^4.15.0",
     "@supabase/supabase-js": "^2.39.4",
-    "@netlify/functions": "^1.6.0"
+    "@netlify/functions": "^1.6.0",
+    "openai": "^4.50.0"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.1",
