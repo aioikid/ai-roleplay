@@ -10,7 +10,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         'Access-Control-Allow-Headers': '*',
         'Access-Control-Allow-Methods': '*',
         'Content-Type': 'application/json',
-      },
+      } as Record<string, string>,
       body: '',
     }
   }
@@ -21,7 +21,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
-      },
+      } as Record<string, string>,
       body: JSON.stringify({ error: 'Method not allowed' })
     }
   }
@@ -46,7 +46,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
-        },
+        } as Record<string, string>,
         body: JSON.stringify({ error: 'Missing Twilio configuration' })
       }
     }
@@ -68,7 +68,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-      },
+      } as Record<string, string>,
       body: JSON.stringify({ token: token.toJwt() })
     }
   } catch (error) {
@@ -78,7 +78,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
-      },
+      } as Record<string, string>,
       body: JSON.stringify({ 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
