@@ -1,57 +1,24 @@
+// functions/_shared.ts
+export const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': '*',
+  'Content-Type': 'application/json'
+} as Record<string, string>;
+
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { CORS_HEADERS } from './_shared.js';
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-  // Handle CORS preflight
+const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': '*',
-        'Content-Type': 'application/json',
-      } as Record<string, string>,
-      body: '',
-    }
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    }
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   try {
-    const { messages } = JSON.parse(event.body || '{}')
+    const body = JSON.parse(event.body || '{}');
+    const messages = body.messages ?? [];
 
-    if (!messages || !Array.isArray(messages)) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'Invalid messages format' })
-      }
-    }
-
-    if (!process.env.OPENAI_API_KEY) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'OpenAI API key not configured' })
-      }
-    }
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -60,47 +27,17 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { 
-            role: 'system', 
-            content: 'あなたは営業ロープレAIです。新人営業の指導役として、丁寧に指導してください。相手の営業スキルを向上させるため、適切なフィードバックと改善点を提供してください。' 
-          },
+          { role: 'system', content: 'あなたは営業ロープレAIです。新人営業の指導役です。丁寧に詰めてください。' },
           ...messages
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
+        ]
       })
-    })
+    });
 
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error('OpenAI API error:', response.status, errorData)
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      } as Record<string, string>,
-      body: JSON.stringify(data)
-    }
-  } catch (error) {
-    console.error('Chat API error:', error)
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
+    const data = await resp.json();
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify(data) };
+  } catch (err) {
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Internal Server Error' }) };
   }
-}
+};
 
-export { handler }
+export { handler };
