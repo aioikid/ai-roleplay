@@ -1,43 +1,52 @@
-// functions/_shared.ts
-export const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Allow-Methods': '*',
-  'Content-Type': 'application/json'
-} as Record<string, string>;
+import axios from 'axios';
 
-import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
-import { CORS_HEADERS } from './_shared.js';
-
-const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
+export async function handler(event: any) {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*',
+        'Content-Type': 'application/json'
+      },
+      body: ''
+    };
   }
+
+  const { message } = JSON.parse(event.body || '{}');
 
   try {
-    const body = JSON.parse(event.body || '{}');
-    const messages = body.messages ?? [];
-
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
+    const openaiRes = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: 'あなたは営業ロープレAIです。新人営業の指導役です。丁寧に詰めてください。' },
-          ...messages
+          { role: 'system', content: 'あなたは営業ロープレAIです。' },
+          { role: 'user', content: message }
         ]
-      })
-    });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
-    const data = await resp.json();
-    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify(data) };
-  } catch (err) {
-    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Internal Server Error' }) };
+    const reply = openaiRes.data.choices[0].message.content;
+
+    return {
+      statusCode: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply })
+    };
+  } catch (error: any) {
+    console.error(error);
+    return {
+      statusCode: 500,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'OpenAI API error' })
+    };
   }
-};
-
-export { handler };
+}
