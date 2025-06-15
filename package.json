@@ -22,4 +22,6 @@
     "tailwindcss": "^3.4.3",
     "typescript": "5.8.3"
   }
+  "scripts": {
+  "preinstall": "npx --yes @next/swc-install"
 }
