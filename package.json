@@ -7,13 +7,12 @@
     "build": "next build"
   },
   "dependencies": {
-    "@netlify/functions": "^3.39.0",
     "axios": "^1.7.2",
     "openai": "^4.48.0",
     "twilio": "^4.27.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.30",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "@types/node": "^20.11.30"
   }
 }
