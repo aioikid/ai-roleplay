@@ -1,90 +1,38 @@
+// functions/_shared.ts
+export const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': '*',
+  'Content-Type': 'application/json'
+} as Record<string, string>;
+
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { jwt } from 'twilio';
+import { CORS_HEADERS } from './_shared.js';
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-  // Handle CORS preflight
+const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': '*',
-        'Content-Type': 'application/json',
-      } as Record<string, string>,
-      body: '',
-    }
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
-  if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    }
-  }
+  const identity = (event.queryStringParameters?.identity) || 'test_user';
+  const AccessToken = jwt.AccessToken;
+  const VoiceGrant = AccessToken.VoiceGrant;
 
-  try {
-    const identity = event.queryStringParameters?.identity || 'test_user'
+  const token = new AccessToken(
+    process.env.TWILIO_ACCOUNT_SID!,
+    process.env.TWILIO_API_KEY_SID!,
+    process.env.TWILIO_API_KEY_SECRET!,
+    { identity }
+  );
 
-    const accountSid = process.env.TWILIO_ACCOUNT_SID
-    const apiKeySid = process.env.TWILIO_API_KEY_SID
-    const apiKeySecret = process.env.TWILIO_API_KEY_SECRET
-    const twimlAppSid = process.env.TWIML_APP_SID
+  const voiceGrant = new VoiceGrant({
+    outgoingApplicationSid: process.env.TWIML_APP_SID!,
+    incomingAllow: true
+  });
 
-    if (!accountSid || !apiKeySid || !apiKeySecret || !twimlAppSid) {
-      console.error('Missing Twilio configuration:', {
-        accountSid: !!accountSid,
-        apiKeySid: !!apiKeySid,
-        apiKeySecret: !!apiKeySecret,
-        twimlAppSid: !!twimlAppSid
-      })
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'Missing Twilio configuration' })
-      }
-    }
+  token.addGrant(voiceGrant);
+  return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ token: token.toJwt() }) };
+};
 
-    // Import Twilio dynamically to avoid issues
-    const { default: AccessToken } = await import('twilio/lib/jwt/AccessToken')
-    const VoiceGrant = AccessToken.VoiceGrant
-
-    const token = new AccessToken(accountSid, apiKeySid, apiKeySecret, { identity })
-    const voiceGrant = new VoiceGrant({
-      outgoingApplicationSid: twimlAppSid,
-      incomingAllow: true
-    })
-
-    token.addGrant(voiceGrant)
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      } as Record<string, string>,
-      body: JSON.stringify({ token: token.toJwt() })
-    }
-  } catch (error) {
-    console.error('Token generation error:', error)
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-}
-
-export { handler }
+export { handler };
