@@ -7,7 +7,7 @@ export const handler: Handler = async (event, context) => {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: ''
@@ -18,13 +18,25 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ error: 'Method not allowed' })
     }
   }
 
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: 'OpenAI API key not configured' })
+      }
+    }
+
     // Get the binary data from the request
     const body = event.isBase64Encoded ? 
       Buffer.from(event.body || '', 'base64') : 
@@ -34,7 +46,8 @@ export const handler: Handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ error: 'No audio data provided' })
       }
@@ -45,6 +58,7 @@ export const handler: Handler = async (event, context) => {
     const audioBlob = new Blob([body], { type: 'audio/webm' })
     formData.append('file', audioBlob, 'recording.webm')
     formData.append('model', 'whisper-1')
+    formData.append('language', 'ja')
 
     const openaiRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -55,7 +69,9 @@ export const handler: Handler = async (event, context) => {
     })
 
     if (!openaiRes.ok) {
-      throw new Error(`OpenAI API error: ${openaiRes.statusText}`)
+      const errorData = await openaiRes.text()
+      console.error('OpenAI STT API error:', openaiRes.status, errorData)
+      throw new Error(`OpenAI API error: ${openaiRes.status} ${openaiRes.statusText}`)
     }
 
     const data = await openaiRes.json()
@@ -65,7 +81,7 @@ export const handler: Handler = async (event, context) => {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: JSON.stringify(data)
@@ -75,9 +91,13 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 }

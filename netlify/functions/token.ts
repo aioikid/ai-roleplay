@@ -9,7 +9,7 @@ export const handler: Handler = async (event, context) => {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, OPTIONS'
       },
       body: ''
@@ -20,7 +20,8 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ error: 'Method not allowed' })
     }
@@ -35,10 +36,17 @@ export const handler: Handler = async (event, context) => {
     const twimlAppSid = process.env.TWIML_APP_SID
 
     if (!accountSid || !apiKeySid || !apiKeySecret || !twimlAppSid) {
+      console.error('Missing Twilio configuration:', {
+        accountSid: !!accountSid,
+        apiKeySid: !!apiKeySid,
+        apiKeySecret: !!apiKeySecret,
+        twimlAppSid: !!twimlAppSid
+      })
       return {
         statusCode: 500,
         headers: {
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ error: 'Missing Twilio configuration' })
       }
@@ -57,7 +65,7 @@ export const handler: Handler = async (event, context) => {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, OPTIONS'
       },
       body: JSON.stringify({ token: token.toJwt() })
@@ -67,9 +75,13 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 }

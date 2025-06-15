@@ -7,7 +7,7 @@ export const handler: Handler = async (event, context) => {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: ''
@@ -18,7 +18,8 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ error: 'Method not allowed' })
     }
@@ -31,9 +32,21 @@ export const handler: Handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ error: 'Invalid messages format' })
+      }
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: 'OpenAI API key not configured' })
       }
     }
 
@@ -46,7 +59,10 @@ export const handler: Handler = async (event, context) => {
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: 'あなたは営業ロープレAIです。新人営業の指導役です。丁寧に詰めてください。' },
+          { 
+            role: 'system', 
+            content: 'あなたは営業ロープレAIです。新人営業の指導役として、丁寧に指導してください。相手の営業スキルを向上させるため、適切なフィードバックと改善点を提供してください。' 
+          },
           ...messages
         ],
         temperature: 0.7,
@@ -55,7 +71,9 @@ export const handler: Handler = async (event, context) => {
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`)
+      const errorData = await response.text()
+      console.error('OpenAI API error:', response.status, errorData)
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
@@ -65,7 +83,7 @@ export const handler: Handler = async (event, context) => {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: JSON.stringify(data)
@@ -75,9 +93,13 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 }
