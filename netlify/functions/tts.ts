@@ -1,100 +1,42 @@
+// functions/_shared.ts
+export const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': '*',
+  'Content-Type': 'application/json'
+} as Record<string, string>;
+
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { CORS_HEADERS } from './_shared.js';
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-  // Handle CORS preflight
+const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Methods': '*',
-        'Content-Type': 'application/json',
-      } as Record<string, string>,
-      body: '',
-    }
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    }
+    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
   }
 
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return {
-        statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'OpenAI API key not configured' })
-      }
-    }
+    const body = JSON.parse(event.body || '{}');
+    const { text, voice = 'nova' } = body;
 
-    const { text, voice } = JSON.parse(event.body || '{}')
-
-    if (!text) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        } as Record<string, string>,
-        body: JSON.stringify({ error: 'Text is required' })
-      }
-    }
-
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    const resp = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
-      body: JSON.stringify({
-        model: 'tts-1-hd',
-        voice: voice || 'nova',
-        input: text.substring(0, 4096) // Limit text length
-      })
-    })
+      body: JSON.stringify({ model: 'tts-1-hd', voice, input: text })
+    });
 
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error('OpenAI TTS API error:', response.status, errorData)
-      throw new Error(`OpenAI TTS API error: ${response.status} ${response.statusText}`)
-    }
-
-    const audioBuffer = await response.arrayBuffer()
-    
+    const arrayBuffer = await resp.arrayBuffer();
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Access-Control-Allow-Origin': '*',
-      } as Record<string, string>,
-      body: Buffer.from(audioBuffer).toString('base64'),
+      headers: { 'Content-Type': 'audio/mpeg', 'Access-Control-Allow-Origin': '*' },
+      body: Buffer.from(arrayBuffer).toString('base64'),
       isBase64Encoded: true
-    }
-  } catch (error) {
-    console.error('TTS API error:', error)
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
-      } as Record<string, string>,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
+    };
+  } catch (err) {
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Internal Server Error' }) };
   }
-}
+};
 
-export { handler }
+export { handler };
