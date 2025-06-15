@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone'
+  output: 'standalone', // Netlify & Bolt 共通で安定
+  reactStrictMode: true
 }
-
-module.exports = nextConfig
+export default nextConfig;
