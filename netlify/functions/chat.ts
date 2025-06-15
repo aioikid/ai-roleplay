@@ -1,17 +1,15 @@
-import { Handler } from '@netlify/functions'
-
-export const handler: Handler = async (event, context) => {
+const handler = async (event, context) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*',
+        'Content-Type': 'application/json',
       },
-      body: ''
+      body: '',
     }
   }
 
@@ -84,8 +82,6 @@ export const handler: Handler = async (event, context) => {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: JSON.stringify(data)
     }
@@ -104,3 +100,5 @@ export const handler: Handler = async (event, context) => {
     }
   }
 }
+
+export { handler }

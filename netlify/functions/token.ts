@@ -1,19 +1,15 @@
-import { Handler } from '@netlify/functions'
-import AccessToken from 'twilio/lib/jwt/AccessToken'
-const VoiceGrant = AccessToken.VoiceGrant
-
-export const handler: Handler = async (event, context) => {
+const handler = async (event, context) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Content-Type': 'application/json'
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*',
+        'Content-Type': 'application/json',
       },
-      body: ''
+      body: '',
     }
   }
 
@@ -53,6 +49,10 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
+    // Import Twilio dynamically to avoid issues
+    const { default: AccessToken } = await import('twilio/lib/jwt/AccessToken')
+    const VoiceGrant = AccessToken.VoiceGrant
+
     const token = new AccessToken(accountSid, apiKeySid, apiKeySecret, { identity })
     const voiceGrant = new VoiceGrant({
       outgoingApplicationSid: twimlAppSid,
@@ -66,8 +66,6 @@ export const handler: Handler = async (event, context) => {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS'
       },
       body: JSON.stringify({ token: token.toJwt() })
     }
@@ -86,3 +84,5 @@ export const handler: Handler = async (event, context) => {
     }
   }
 }
+
+export { handler }
