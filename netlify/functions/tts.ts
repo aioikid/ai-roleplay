@@ -1,10 +1,9 @@
-export async function handler(event: any) {
+import { Handler } from '@netlify/functions';
+import OpenAI from 'openai';
+
+export const handler: Handler = async (event) => {
   return {
-    statusCode: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ audioUrl: '（TTS処理はここに実装）' })
+    statusCode: 501,
+    body: 'TTSは未実装です',
   };
-}
+};
