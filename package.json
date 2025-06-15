@@ -5,22 +5,21 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "preinstall": "npx --yes @next/swc-install"
+    "start": "next start"
   },
   "dependencies": {
-    "@netlify/functions": "^2.0.0",
-    "@supabase/supabase-js": "^2.42.0",
     "next": "14.2.3",
-    "openai": "^4.49.1",
-    "twilio": "^4.27.0"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "twilio": "^4.15.0",
+    "@supabase/supabase-js": "^2.39.4",
+    "@netlify/functions": "^4.41.0"
   },
   "devDependencies": {
-    "@types/node": "20.11.30",
-    "@types/react": "18.2.47",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.38",
     "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.21",
-    "tailwindcss": "^3.3.3",
-    "typescript": "^5.3.3"
+    "typescript": "^5.4.5",
+    "@types/react": "^18.2.70"
   }
 }
