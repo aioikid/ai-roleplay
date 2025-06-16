@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  reactStrictMode: true,
+  swcMinify: false,  // ← SWCバイナリエラー回避策
   experimental: {
-    turbo: false
+    turbo: {
+      enabled: true
+    }
   }
 }
 
