@@ -1,10 +1,9 @@
 // pages/api/ai.ts
-
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { OpenAI } from 'openai'
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // 必ず環境変数で設定する
+  apiKey: process.env.OPENAI_API_KEY,
 })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,24 +12,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { input } = req.body
-
   if (!input || typeof input !== 'string') {
     return res.status(400).json({ error: 'Invalid input' })
   }
 
   try {
-    const chatCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o', // または 'gpt-3.5-turbo' も可
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'あなたは優秀な営業トレーナーです。' },
+        { role: 'system', content: 'あなたは優秀な営業トレーナーです。簡潔で具体的に答えてください。' },
         { role: 'user', content: input },
       ],
     })
 
-    const aiResponse = chatCompletion.choices[0]?.message?.content || 'エラー：返答が取得できませんでした。'
-    return res.status(200).json({ result: aiResponse })
-  } catch (err: any) {
-    console.error('OpenAI error:', err)
-    return res.status(500).json({ error: 'AI応答の取得に失敗しました' })
+    const result = completion.choices[0]?.message?.content ?? '（AI応答が空でした）'
+    res.status(200).json({ result })
+  } catch (error) {
+    console.error('OpenAI API error:', error)
+    res.status(500).json({ error: 'OpenAI API 呼び出しに失敗しました' })
   }
 }
