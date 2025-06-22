@@ -11,10 +11,10 @@ export default function Home() {
     const res = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: input }),
+      body: JSON.stringify({ input }), // 🔧 修正：prompt → input に変更
     })
     const data = await res.json()
-    setReply(data.reply || '返信なし')
+    setReply(data.result || '返信なし') // 🔧 修正：data.reply → data.result に変更
   }
 
   return (
