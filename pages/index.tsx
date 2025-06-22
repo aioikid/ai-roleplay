@@ -38,11 +38,11 @@ export default function Home() {
       setListening(true)
     }
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript
-      setInput(transcript)
-      setListening(false)
-    }
+recognition.onresult = (event: Event) => {
+  const result = (event as any).results?.[0]?.[0]?.transcript
+  if (result) setInput(result)
+  setListening(false)
+}
 
     recognition.onerror = (event: any) => {
       console.error('認識エラー', event.error)
