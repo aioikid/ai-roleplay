@@ -1,4 +1,3 @@
-// pages/api/ai.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { OpenAI } from 'openai'
 
@@ -20,15 +19,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'あなたは優秀な営業トレーナーです。簡潔で具体的に答えてください。' },
+        {
+          role: 'system',
+          content:
+            'あなたは一流の営業トレーナーです。ユーザーの質問に対して、営業的な意図を汲み取り、簡潔かつ的確に答えてください。',
+        },
         { role: 'user', content: input },
       ],
     })
 
     const result = completion.choices[0]?.message?.content ?? '（AI応答が空でした）'
+    console.log('AI Response:', result)
+
     res.status(200).json({ result })
   } catch (error) {
-    console.error('OpenAI API error:', error)
+    console.error('OpenAI API Error:', error)
     res.status(500).json({ error: 'OpenAI API 呼び出しに失敗しました' })
   }
 }
