@@ -3,40 +3,54 @@ import { useState } from 'react';
 export default function Home() {
   const [inputText, setInputText] = useState('');
 
-  // 🟣 録音 → Whisper へ送信 → テキスト化
+  // 🟣 録音してWhisperに送る関数（デバッグ付き）
   const handleRecordAndTranscribe = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    const chunks: BlobPart[] = [];
+    console.log('🟣 録音開始');
 
-    mediaRecorder.ondataavailable = (e) => {
-      chunks.push(e.data);
-    };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
 
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      const formData = new FormData();
-      formData.append('file', blob, 'audio.webm');
+      mediaRecorder.ondataavailable = (e) => {
+        chunks.push(e.data);
+      };
 
-      const res = await fetch('/api/whisper', {
-        method: 'POST',
-        body: formData,
-      });
+      mediaRecorder.onstop = async () => {
+        console.log('🛑 録音停止、Whisperへ送信開始');
 
-      const data = await res.json();
-      setInputText(data.text || ''); // テキスト欄に反映
-    };
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', blob, 'audio.webm');
 
-    mediaRecorder.start();
+        const res = await fetch('/api/whisper', {
+          method: 'POST',
+          body: formData,
+        });
 
-    // 5秒録音
-    setTimeout(() => {
-      mediaRecorder.stop();
-      stream.getTracks().forEach((track) => track.stop());
-    }, 5000);
+        if (!res.ok) {
+          console.error('Whisper API エラー:', await res.text());
+          return;
+        }
+
+        const data = await res.json();
+        console.log('📝 取得したテキスト:', data.text);
+        setInputText(data.text || '');
+      };
+
+      mediaRecorder.start();
+      console.log('🎙 録音中...');
+
+      setTimeout(() => {
+        mediaRecorder.stop();
+        stream.getTracks().forEach((track) => track.stop());
+      }, 5000);
+    } catch (err) {
+      console.error('🎤 録音エラー:', err);
+    }
   };
 
-  // 🔵 入力テキストをTTSで再生
+  // 🔵 入力テキストをTTSで再生する関数
   const handleVoiceQuestion = async () => {
     if (!inputText.trim()) return;
 
@@ -50,7 +64,7 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        console.error('TTS API error:', await res.text());
+        console.error('TTS API エラー:', await res.text());
         return;
       }
 
@@ -59,7 +73,7 @@ export default function Home() {
       const audio = new Audio(url);
       audio.play();
     } catch (err) {
-      console.error('TTS fetch failed:', err);
+      console.error('TTS fetch 失敗:', err);
     }
   };
 
