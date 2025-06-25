@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     req.on('error', reject)
   })
 
-  const fileBuffer = Buffer.concat(buffers)
+  const fileBuffer = Buffer.concat(buffers as Buffer[]);
   const blob = new Blob([fileBuffer], { type: 'audio/webm' })
 
   formData.append('file', blob, 'audio.webm')
