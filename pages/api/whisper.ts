@@ -9,8 +9,7 @@ export const config = {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const buffers: Uint8Array[] = [];
@@ -19,15 +18,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     buffers.push(chunk);
   }
 
-  // TypeScriptへの明示：Buffer[] への変換とアサーション
-  const typedBuffers = buffers.map((b) => Buffer.from(b));
-　const fileBuffer = Buffer.concat(typedBuffers as any); // ← ここでanyを使う
-
-
+  const fileBuffer = Buffer.concat(buffers as any);
   const blob = new Blob([fileBuffer], { type: 'audio/webm' });
 
   const formData = new FormData();
   formData.append('file', blob, 'audio.webm');
+  formData.append('model', 'whisper-1');
 
-  res.status(200).json({ message: 'Audio received', size: fileBuffer.length });
+  try {
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY!}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    res.status(200).json({ text: data.text });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Transcription failed' });
+  }
 }
