@@ -19,17 +19,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     buffers.push(chunk);
   }
 
-  // Bufferに変換して結合
-  const typedBuffers: Buffer[] = buffers.map((b) => Buffer.from(b));
+  // TypeScriptへの明示：Buffer[] への変換とアサーション
+  const typedBuffers = buffers.map((b) => Buffer.from(b)) as unknown as readonly (Uint8Array | readonly number[])[];
   const fileBuffer = Buffer.concat(typedBuffers);
 
   const blob = new Blob([fileBuffer], { type: 'audio/webm' });
 
   const formData = new FormData();
   formData.append('file', blob, 'audio.webm');
-
-  // 必要であればここで fetch で Whisper API などへ送信
-  // const response = await fetch('https://api.openai.com/v1/audio/transcriptions', { ... })
 
   res.status(200).json({ message: 'Audio received', size: fileBuffer.length });
 }
