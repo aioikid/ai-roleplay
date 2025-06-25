@@ -20,8 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // TypeScriptへの明示：Buffer[] への変換とアサーション
-  const typedBuffers = buffers.map((b) => Buffer.from(b)) as unknown as readonly (Uint8Array | readonly number[])[];
-  const fileBuffer = Buffer.concat(typedBuffers);
+  const typedBuffers = buffers.map((b) => Buffer.from(b));
+　const fileBuffer = Buffer.concat(typedBuffers as any); // ← ここでanyを使う
+
 
   const blob = new Blob([fileBuffer], { type: 'audio/webm' });
 
