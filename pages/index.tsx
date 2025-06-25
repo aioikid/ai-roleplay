@@ -6,6 +6,7 @@ export default function Home() {
   const [input, setInput] = useState('')
   const [reply, setReply] = useState('')
   const [listening, setListening] = useState(false)
+  const [recording, setRecording] = useState(false) // ✅ 録音用
 
   const handleSubmit = async () => {
     const res = await fetch('/api/ai', {
@@ -23,6 +24,32 @@ export default function Home() {
     speechSynthesis.speak(utterance)
   }
 
+  // 🎤 Whisper用 音声録音して /api/whisper に送信
+  const handleSTT = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const mediaRecorder = new MediaRecorder(stream)
+    const chunks: Blob[] = []
+
+    mediaRecorder.ondataavailable = (e) => {
+      chunks.push(e.data)
+    }
+
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' })
+      const res = await fetch('/api/whisper', {
+        method: 'POST',
+        body: blob,
+      })
+      const data = await res.json()
+      setInput(data.text || '') // Whisper結果を入力欄に
+      setRecording(false)
+    }
+
+    mediaRecorder.start()
+    setRecording(true)
+    setTimeout(() => mediaRecorder.stop(), 5000) // ⏱ 録音時間
+  }
+
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
       alert('音声認識はこのブラウザでサポートされていません。')
@@ -38,11 +65,11 @@ export default function Home() {
       setListening(true)
     }
 
-recognition.onresult = (event: Event) => {
-  const result = (event as any).results?.[0]?.[0]?.transcript
-  if (result) setInput(result)
-  setListening(false)
-}
+    recognition.onresult = (event: Event) => {
+      const result = (event as any).results?.[0]?.[0]?.transcript
+      if (result) setInput(result)
+      setListening(false)
+    }
 
     recognition.onerror = (event: any) => {
       console.error('認識エラー', event.error)
@@ -71,6 +98,12 @@ recognition.onresult = (event: Event) => {
           className={`px-4 py-2 rounded text-white ${listening ? 'bg-red-500' : 'bg-green-500'} hover:opacity-80`}
         >
           {listening ? '録音中...' : '🎤 話す'}
+        </button>
+        <button
+          onClick={handleSTT}
+          className={`px-4 py-2 rounded text-white ${recording ? 'bg-red-600' : 'bg-purple-600'} hover:opacity-80`}
+        >
+          {recording ? '録音中...' : '🎤 音声で質問'}
         </button>
         <button
           onClick={handleSubmit}
