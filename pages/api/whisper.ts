@@ -21,8 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     req.on('error', reject)
   })
 
-  const fileBuffer = Buffer.concat(buffers as Buffer[]);
-  const blob = new Blob([fileBuffer], { type: 'audio/webm' })
+  // 1. Node.js の Buffer を必ずインポート
+import { Buffer } from 'buffer';
+
+// 2. 型を明示しつつ、安全に結合
+const typedBuffers: Buffer[] = buffers.map((b) => Buffer.from(b));
+const fileBuffer = Buffer.concat(typedBuffers);
+const blob = new Blob([fileBuffer], { type: 'audio/webm' })
 
   formData.append('file', blob, 'audio.webm')
   formData.append('model', 'whisper-1')
