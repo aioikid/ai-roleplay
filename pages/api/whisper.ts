@@ -19,11 +19,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const fileBuffer = Buffer.concat(buffers as any);
-  const blob = new Blob([fileBuffer], { type: 'audio/webm' });
 
   const formData = new FormData();
-  formData.append('file', blob, 'audio.webm');
+  formData.append('file', new Blob([fileBuffer]), 'audio.webm'); // ← 明示的にBlob
   formData.append('model', 'whisper-1');
+  formData.append('language', 'ja'); // ← 日本語指定（省略可）
 
   try {
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -35,9 +35,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const data = await response.json();
+
+    if (!data.text) {
+      console.error('🟥 Whisper API レスポンスに text がありません:', data);
+      return res.status(500).json({ error: 'No text in Whisper response', raw: data });
+    }
+
     res.status(200).json({ text: data.text });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Transcription failed' });
+    console.error('🟥 Whisper API エラー:', err);
+    res.status(500).json({ error: 'Whisper transcription failed' });
   }
 }
