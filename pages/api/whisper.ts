@@ -1,47 +1,35 @@
-// pages/api/whisper.ts
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { Buffer } from 'buffer';
 
 export const config = {
   api: {
     bodyParser: false,
   },
-}
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
-  const formData = new FormData()
-  const buffers: Buffer[] = []
+  const buffers: Uint8Array[] = [];
 
-  await new Promise<void>((resolve, reject) => {
-    req.on('data', (chunk) => buffers.push(chunk))
-    req.on('end', () => resolve())
-    req.on('error', reject)
-  })
+  for await (const chunk of req) {
+    buffers.push(chunk);
+  }
 
-  // 1. Node.js の Buffer を必ずインポート
-import { Buffer } from 'buffer';
+  // Bufferに変換して結合
+  const typedBuffers: Buffer[] = buffers.map((b) => Buffer.from(b));
+  const fileBuffer = Buffer.concat(typedBuffers);
 
-// 2. 型を明示しつつ、安全に結合
-const typedBuffers: Buffer[] = buffers.map((b) => Buffer.from(b));
-const fileBuffer = Buffer.concat(typedBuffers);
-const blob = new Blob([fileBuffer], { type: 'audio/webm' })
+  const blob = new Blob([fileBuffer], { type: 'audio/webm' });
 
-  formData.append('file', blob, 'audio.webm')
-  formData.append('model', 'whisper-1')
-  formData.append('response_format', 'text')
-  formData.append('language', 'ja')
+  const formData = new FormData();
+  formData.append('file', blob, 'audio.webm');
 
-  const openaiRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY!}`,
-    },
-    body: formData as any,
-  })
+  // 必要であればここで fetch で Whisper API などへ送信
+  // const response = await fetch('https://api.openai.com/v1/audio/transcriptions', { ... })
 
-  const text = await openaiRes.text()
-  res.status(200).json({ text })
+  res.status(200).json({ message: 'Audio received', size: fileBuffer.length });
 }
