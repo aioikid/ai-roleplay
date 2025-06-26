@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: whisper-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    buildScript: |
+      apt-get update
+      apt-get install -y ffmpeg
