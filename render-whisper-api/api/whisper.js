@@ -1,59 +1,62 @@
-const formidable = require('formidable');
+const express = require('express');
+const multer = require('multer');
 const fs = require('fs');
-const { exec } = require('child_process');
 const path = require('path');
+const { exec } = require('child_process');
+const axios = require('axios');
 require('dotenv').config();
 
-const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-app.post('/api/whisper', (req, res) => {
-  const form = new formidable.IncomingForm({ uploadDir: '/tmp', keepExtensions: true });
+// uploads フォルダ作成（Render用対策）
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
 
-  form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: 'parse error', detail: err });
+const upload = multer({ dest: uploadsDir });
 
-    const file = files.file;
-    if (!file || !file.filepath) return res.status(400).json({ error: 'no file uploaded' });
+app.post('/api/whisper', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    console.error('No file uploaded');
+    return res.status(400).json({ error: 'no file uploaded' });
+  }
 
-    const inputPath = file.filepath;
-    const outputPath = path.join('/tmp', `converted-${Date.now()}.mp3`);
+  console.log('Uploaded file:', req.file);
+
+  const inputPath = req.file.path;
+  const outputPath = path.join(__dirname, 'converted.mp3');
+
+  exec(`ffmpeg -i "${inputPath}" -ar 44100 -ac 2 -b:a 192k "${outputPath}"`, async (error) => {
+    if (error) {
+      console.error('ffmpeg error:', error);
+      return res.status(500).json({ error: 'ffmpeg conversion failed' });
+    }
 
     try {
-      await new Promise((resolve, reject) => {
-        exec(`ffmpeg -i "${inputPath}" -ar 44100 -ac 2 -b:a 192k "${outputPath}"`, (error) => {
-          if (error) reject(error);
-          else resolve();
-        });
-      });
+      const response = await axios.post(
+        'https://api.openai.com/v1/audio/transcriptions',
+        fs.createReadStream(outputPath),
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'multipart/form-data',
+          },
+          params: {
+            model: 'whisper-1',
+          },
+        }
+      );
 
-      const mp3Buffer = fs.readFileSync(outputPath);
-      const formData = new FormData();
-      formData.append('file', new Blob([mp3Buffer]), 'audio.mp3');
-      formData.append('model', 'whisper-1');
-      formData.append('language', 'ja');
-
-      const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: formData,
-      });
-
-      const data = await whisperRes.json();
-      res.status(200).json({ text: data.text });
-    } catch (e) {
-      console.error(e);
-      res.status(500).json({ error: 'conversion failed', detail: e });
-    } finally {
-      fs.unlinkSync(inputPath);
-      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      res.json({ text: response.data.text });
+    } catch (apiErr) {
+      console.error('OpenAI API error:', apiErr?.response?.data || apiErr.message);
+      res.status(500).json({ error: 'transcription failed' });
     }
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
