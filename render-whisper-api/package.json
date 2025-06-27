@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "ai-roleplay-poc",
   "version": "0.1.0",
   "private": true,
@@ -26,7 +25,6 @@
   　　"formidable": "^3.5.0"
 }
 
-=======
   "name": "render-whisper-api",
   "version": "1.0.0",
   "description": "Whisper transcription API with ffmpeg for Render.com",
@@ -38,6 +36,5 @@
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "formidable": "^3.5.0"
->>>>>>> 2bb382b (Add Whisper API files)
   }
 }
