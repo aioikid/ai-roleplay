@@ -22,7 +22,7 @@ app.post('/api/whisper', (req, res) => {
 
     try {
       await new Promise((resolve, reject) => {
-        exec(\`ffmpeg -i "\${inputPath}" -ar 44100 -ac 2 -b:a 192k "\${outputPath}"\`, (error) => {
+        exec(`ffmpeg -i "${inputPath}" -ar 44100 -ac 2 -b:a 192k "${outputPath}"`, (error) => {
           if (error) reject(error);
           else resolve();
         });
